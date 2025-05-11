@@ -1,7 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
-import SvgAdminPanelSettings from '../SVGs/SvgAdminPanelSettings';
-import SvgDraft from '../SVGs/SvgDraft';
+import SvgAdminPanelSettings from '../SVGs/SvgAdminPanelSettings'; // Placeholder, decide if needed
+import SvgDraft from '../SVGs/SvgDraft'; // Placeholder, decide if needed
+import { Badges as BadgesType } from '../../api/models'; // Import BadgesType
+
+const isAdmin = true;
 
 const BadgesContainer = styled.div`
   display: flex;
@@ -25,7 +28,7 @@ const TextBadge = styled.div`
 
 // New styled component for Icon Buttons (circular)
 const IconButton = styled.button`
-  background: transparent;
+  background: rgba(0, 0, 0, 0.1);
   width: 28px;
   height: 28px;
   border-radius: 50%; /* Circular shape */
@@ -45,28 +48,41 @@ const IconButton = styled.button`
 
   &:hover {
     background: rgba(255, 255, 255, 0.8);
-    /*background: rgba(255, 255, 255, 1);*/ /* More opaque background on hover */
     svg {
       fill: #000000; /* Darker icon on hover */
     }
   }
 `;
 
-const BadgesSection: React.FC = () => {
+interface BadgesSectionProps {
+  badges: BadgesType;
+}
+
+const BadgesSection: React.FC<BadgesSectionProps> = ({ badges }) => {
   return (
     <BadgesContainer>
-      <TextBadge>
-        Recommended {/* Placeholder for Hebrew text "שעת סיפור הורים וילדים! מומלץ" */}
-      </TextBadge>
-      <TextBadge>
-        Pending Approval {/* Placeholder for Hebrew text "ממתין לאישור הנהלה" */}
-      </TextBadge>
-      <IconButton>
-        <SvgAdminPanelSettings />
-      </IconButton>
-      <IconButton>
-        <SvgDraft />
-      </IconButton>
+      {/* Display customBadge if it exists */}
+      {badges.customBadge && 
+        <TextBadge>
+          {badges.customBadge}
+        </TextBadge>
+      }
+      {/* TODO: check if here we should display admin badges instead */}
+      {badges.groupFullText && 
+        <TextBadge>
+          {badges.groupFullText}
+        </TextBadge>
+      }
+      {isAdmin && 
+        <IconButton>
+          <SvgAdminPanelSettings />
+        </IconButton>
+      }
+      {isAdmin && 
+        <IconButton>
+          <SvgDraft />
+        </IconButton>
+      }
     </BadgesContainer>
   );
 };

@@ -2,10 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 
 interface DateInfoProps {
-  fromMonth: string;
-  fromDay: string;
-  untilMonth: string;
-  untilDay: string;
+  startDate: Date | null;
+  endDate: Date | null;
 }
 
 const DateContainer = styled.div`
@@ -47,18 +45,35 @@ const UntilText = styled.div`
   color: #BBBBBB;
 `;
 
-const DateInfo: React.FC<DateInfoProps> = ({ fromMonth, fromDay, untilMonth, untilDay }) => {
+const DateInfo: React.FC<DateInfoProps> = ({ startDate, endDate }) => {
+  const formatDate = (date: Date | null) => {
+    if (!date) return { month: 'N/A', day: 'N/A' };
+    const month = date.toLocaleString('default', { month: 'short' }).toUpperCase();
+    const day = date.getDate().toString();
+    return { month, day };
+  };
+
+  const startDateFormatted = formatDate(startDate);
+  const endDateFormatted = formatDate(endDate);
+
+  // If only start date is available, or if start and end dates are the same day
+  const isSingleDayEvent = !endDate || (startDate && endDate && startDate.toDateString() === endDate.toDateString());
+
   return (
     <DateContainer>
       <DateBox>
-        <Month>{fromMonth}</Month>
-        <Day>{fromDay}</Day>
+        <Month>{startDateFormatted.month}</Month>
+        <Day>{startDateFormatted.day}</Day>
       </DateBox>
-      <UntilText>Until</UntilText>
-      <DateBox>
-        <Month>{untilMonth}</Month>
-        <Day>{untilDay}</Day>
-      </DateBox>
+      {!isSingleDayEvent && startDate && endDate && (
+        <>
+          <UntilText>Until</UntilText>
+          <DateBox>
+            <Month>{endDateFormatted.month}</Month>
+            <Day>{endDateFormatted.day}</Day>
+          </DateBox>
+        </>
+      )}
     </DateContainer>
   );
 };

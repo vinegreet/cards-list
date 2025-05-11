@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import BadgesSection from './BadgesSection';
 import ParticipantsNumber from './ParticipantsNumber';
+import { Badges as BadgesType } from '../../api/models';
 
 const OverlayContainer = styled.div`
   position: absolute;
@@ -39,12 +40,13 @@ const JoinOverlay = styled.span`
 
 interface PosterOverlayProps {
   participantsNumber: number;
+  badges: BadgesType;
 }
 
-const PosterOverlay: React.FC<PosterOverlayProps> = ({ participantsNumber }) => {
+const PosterOverlay: React.FC<PosterOverlayProps> = ({ participantsNumber, badges }) => {
   return (
     <OverlayContainer>
-      <BadgesSection />
+      <BadgesSection badges={badges} />
       <AlignedBottomWrapper>
         <ParticipantsNumber number={participantsNumber} />
       </AlignedBottomWrapper>

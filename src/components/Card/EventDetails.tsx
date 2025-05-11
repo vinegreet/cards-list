@@ -1,17 +1,18 @@
 import React from 'react';
 import styled from 'styled-components';
 import SvgEvent from '../SVGs/SvgEvent';
-import SvgNestClockFarsightAnalog from '../SVGs/SvgNestClockFarsightAnalog';
+// import SvgNestClockFarsightAnalog from '../SVGs/SvgNestClockFarsightAnalog'; // Assuming time is part of startDateString for now
 import SvgAttachMoney from '../SVGs/SvgAttachMoney';
 import SvgLocationOn from '../SVGs/SvgLocationOn';
 import LeaderInfo from './LeaderInfo';
+import { Leader as LeaderType } from '../../api/models'; // Import LeaderType
 
 interface EventDetailsProps {
   name: string;
-  startDate: string;
-  startTime: string;
+  startDateString: string; // Combined date/time string or just date
   price: string;
   location: string;
+  leader: LeaderType;
 }
 
 const DetailsContainer = styled.div`
@@ -63,23 +64,30 @@ const DetailItem = styled.div`
 
 const EventDetails: React.FC<EventDetailsProps> = ({
   name,
-  startDate,
-  startTime,
+  startDateString,
   price,
-  location
+  location,
+  leader
 }) => {
+  // Helper to format date string if needed, or directly use it
+  // For example, if startDateString is ISO and you want to show only date:
+  const displayDate = startDateString !== 'N/A' ? new Date(startDateString).toLocaleDateString() : 'N/A';
+  // If time is separate or needs specific formatting, that logic would go here.
+
   return (
     <DetailsContainer>
       <EventName>{name}</EventName>
       <DetailsList>
         <DetailItem>
-          {startDate}
+          {displayDate} {/* Or use startDateString directly if format is acceptable */}
           <SvgEvent />
         </DetailItem>
+        {/* 
         <DetailItem>
-          {startTime}
+          {startTime} // If you have separate startTime from API 
           <SvgNestClockFarsightAnalog />
         </DetailItem>
+        */}
         <DetailItem>
           {price}
           <SvgAttachMoney />
@@ -88,7 +96,7 @@ const EventDetails: React.FC<EventDetailsProps> = ({
           {location}
           <SvgLocationOn />
         </DetailItem>
-        <LeaderInfo name="Leader Name" />
+        <LeaderInfo name={leader.name} avatar={leader.avatar} /> {/* Pass leader info */}
       </DetailsList>
     </DetailsContainer>
   );

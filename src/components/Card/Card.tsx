@@ -1,9 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
-import mockPoster from '../../assets/mock-poster.jpg';
 import PosterOverlay from './PosterOverlay';
 import DateInfo from './DateInfo';
 import EventDetails from './EventDetails';
+import { Event as EventType } from '../../api/models'; // Import EventType
 
 const CardContainer = styled.div`
   box-sizing: border-box;
@@ -29,10 +29,9 @@ const CardContent = styled.div`
 const PosterImage = styled.div<{ posterImage: string }>`
   width: 100%;
   height: 216px;
-  background-image: ${props => `url(${props.posterImage})`};
+  background-image: ${props => props.posterImage ? `url(${props.posterImage})` : 'none'}; // Handle missing poster image
   background-size: cover;
   background-position: center;
-  background-color: #FFFFFF;
   border-radius: 10px 10px 0px 0px;
   /*cursor: pointer;*/
   position: relative;
@@ -50,21 +49,42 @@ const InfoContainer = styled.div`
   justify-content: space-between;
 `;
 
-const Card: React.FC = () => {
+interface CardProps {
+  event: EventType;
+}
+
+const Card: React.FC<CardProps> = ({ event }) => {
+  // Default or placeholder image if not available
+  const posterSrc = event.header.images.find(img => img.type === 'thumbnail')?.src || event.header.images.find(img => img.type === 'cover')?.src || ''; // Use thumbnail or cover, fallback to empty string
+  const participantsCount = event.people.numbers.participantsCount;
+
+  // Extract date info - this might need more robust parsing based on actual date string formats
+  const startDate = event.activityBlock.startDate ? new Date(event.activityBlock.startDate) : null;
+  const endDate = event.activityBlock.endDate ? new Date(event.activityBlock.endDate) : null;
+
   return (
     <CardContainer>
       <CardContent>
-        <PosterImage posterImage={mockPoster}>
-          <PosterOverlay participantsNumber={10} />
+        <PosterImage posterImage={posterSrc}>
+          <PosterOverlay 
+            participantsNumber={participantsCount !== null ? participantsCount : 0} 
+            badges={event.badges}
+          />
         </PosterImage>
         <InfoContainer>
-          <DateInfo fromMonth="May" fromDay="10" untilMonth="May" untilDay="10" />
+          <DateInfo 
+            startDate={startDate} 
+            endDate={endDate} 
+          />
           <EventDetails 
-            name="Event Name" 
-            startDate="Start Date" 
-            startTime="Start Time" 
-            price="Price" 
-            location="Location" 
+            name={event.name} 
+            // Assuming startDate contains time as well, or it's separate
+            // For simplicity, just passing date for now. Time formatting would be needed.
+            startDateString={event.activityBlock.startDate || 'N/A'} 
+            // Price might come from a different field or need calculation
+            price={event.paymentText || 'Free'} 
+            location={(event.activityBlock.location && 'text' in event.activityBlock.location ? event.activityBlock.location.text : undefined) || 'Online'} 
+            leader={event.leader}
           />
         </InfoContainer>
       </CardContent>
