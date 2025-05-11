@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import PosterOverlay from './PosterOverlay';
 import DateInfo from './DateInfo';
 import EventDetails from './EventDetails';
-import { Event as EventType } from '../../api/models'; // Import EventType
+import { Event as EventType, Image } from '../../api/models'; // Added Image for typing
+import { useEvents } from '../../api/hooks'; // Corrected import path
 
 const CardContainer = styled.div`
   box-sizing: border-box;
@@ -20,6 +21,7 @@ const CardContent = styled.div`
   height: 428px;
   background: #FFFFFF;
   box-shadow: 0px 4px 17px rgba(0, 0, 0, 0.08);
+  /* Duplicated box-shadow, remove after development phase */
   box-shadow: 0px 4px 17px rgba(0, 0, 0, 0.38);
   border-radius: 10px 10px 10px 10px;
   display: flex;
@@ -30,17 +32,12 @@ const CardContent = styled.div`
 const PosterImage = styled.div<{ posterImage: string }>`
   width: 100%;
   height: 216px;
-  background-image: ${props => props.posterImage ? `url(${props.posterImage})` : 'none'}; // Handle missing poster image
+  background-image: ${props => props.posterImage ? `url(${props.posterImage})` : 'none'};
   background-size: cover;
   background-position: center;
-  background-color: #808080;
+  background-color: #808080; /* Fallback color */
   border-radius: 10px 10px 0px 0px;
-  /*cursor: pointer;*/
   position: relative;
-  
-  &:hover {
-    border-radius: 10px 10px 0px 0px;
-  }
 `;
 
 const InfoContainer = styled.div`
@@ -52,15 +49,22 @@ const InfoContainer = styled.div`
 `;
 
 interface CardProps {
-  event: EventType;
+  eventId: number;
 }
 
-const Card: React.FC<CardProps> = ({ event }) => {
-  // Default or placeholder image if not available
-  const posterSrc = event.header.images.find(img => img.type === 'thumbnail')?.src || event.header.images.find(img => img.type === 'cover')?.src || ''; // Use thumbnail or cover, fallback to empty string
+const CardComponent: React.FC<CardProps> = ({ eventId }) => {
+  const { eventsMappedById } = useEvents(); 
+  
+  const event = eventsMappedById[eventId];
+
+  if (!event) {
+    return <CardContainer>Event (ID: {eventId}) not found.</CardContainer>;
+  }
+
+  const posterSrc = event.header.images.find((img: Image) => img.type === 'thumbnail')?.src || 
+                    event.header.images.find((img: Image) => img.type === 'cover')?.src || '';
   const participantsCount = event.people.numbers.participantsCount;
 
-  // Extract date info - this might need more robust parsing based on actual date string formats
   const startDate = event.activityBlock.startDate ? new Date(event.activityBlock.startDate) : null;
   const endDate = event.activityBlock.endDate ? new Date(event.activityBlock.endDate) : null;
 
@@ -80,10 +84,7 @@ const Card: React.FC<CardProps> = ({ event }) => {
           />
           <EventDetails 
             name={event.name} 
-            // Assuming startDate contains time as well, or it's separate
-            // For simplicity, just passing date for now. Time formatting would be needed.
             startDateString={event.activityBlock.startDate || 'N/A'} 
-            // Price might come from a different field or need calculation
             price={event.paymentText || 'Free'} 
             location={(event.activityBlock.location && 'text' in event.activityBlock.location ? event.activityBlock.location.text : undefined) || 'Online'} 
             leader={event.leader}
@@ -94,4 +95,4 @@ const Card: React.FC<CardProps> = ({ event }) => {
   );
 };
 
-export default Card; 
+export default React.memo(CardComponent); 
