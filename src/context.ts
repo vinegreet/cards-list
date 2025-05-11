@@ -7,6 +7,10 @@ export interface EventsContextType {
   eventsMappedById: Record<number, EventType>;
   loading: boolean;
   error: string | null;
+  // Added for lazy loading
+  loadMoreEvents: () => void;
+  isLoadingMore: boolean;
+  canLoadMore: boolean;
 }
 
 // Create the context
