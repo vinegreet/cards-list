@@ -20,6 +20,7 @@ const CardContent = styled.div`
   height: 428px;
   background: #FFFFFF;
   box-shadow: 0px 4px 17px rgba(0, 0, 0, 0.08);
+  box-shadow: 0px 4px 17px rgba(0, 0, 0, 0.38);
   border-radius: 10px 10px 10px 10px;
   display: flex;
   flex-direction: column;
@@ -32,6 +33,7 @@ const PosterImage = styled.div<{ posterImage: string }>`
   background-image: ${props => props.posterImage ? `url(${props.posterImage})` : 'none'}; // Handle missing poster image
   background-size: cover;
   background-position: center;
+  background-color: #808080;
   border-radius: 10px 10px 0px 0px;
   /*cursor: pointer;*/
   position: relative;
