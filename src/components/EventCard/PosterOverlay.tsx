@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import BadgesSection from './BadgesSection';
-import ParticipantsNumber from './ParticipantsNumber';
+import { BadgesSection, ParticipantsNumber } from './';
 import { Badges as BadgesType } from '../../api/models';
 
 const OverlayContainer = styled.div`
@@ -50,7 +49,6 @@ const PosterOverlay: React.FC<PosterOverlayProps> = ({ participantsNumber, badge
       <AlignedBottomWrapper>
         <ParticipantsNumber number={participantsNumber} />
       </AlignedBottomWrapper>
-      {/* <JoinOverlay className="join-overlay">Join</JoinOverlay> */}
     </OverlayContainer>
   );
 };

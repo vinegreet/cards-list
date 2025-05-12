@@ -48,11 +48,11 @@ const InfoContainer = styled.div`
   justify-content: space-between;
 `;
 
-interface CardProps {
+interface EventCardProps {
   eventId: number;
 }
 
-const CardComponent: React.FC<CardProps> = ({ eventId }) => {
+const EventCardComponent: React.FC<EventCardProps> = ({ eventId }) => {
   const { eventsMappedById } = useEvents(); 
   
   const event = eventsMappedById[eventId];
@@ -95,4 +95,4 @@ const CardComponent: React.FC<CardProps> = ({ eventId }) => {
   );
 };
 
-export default React.memo(CardComponent); 
+export default React.memo(EventCardComponent); 

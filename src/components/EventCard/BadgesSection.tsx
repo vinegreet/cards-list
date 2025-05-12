@@ -15,41 +15,40 @@ const BadgesContainer = styled.div`
 
 const TextBadge = styled.div`
   background: rgba(255, 255, 255, 0.8);
-  color: #333333; /* Dark text color */
+  color: #333333;
   padding: 4px 6px;
   border-radius: 8px;
   font-size: 12px;
-  font-family: 'Heebo', sans-serif; /* Consistent font */
+  font-family: 'Heebo', sans-serif;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
 `;
 
-
 const IconButton = styled.button`
   background: rgba(0, 0, 0, 0.1);
   width: 28px;
   height: 28px;
-  border-radius: 50%; /* Circular shape */
+  border-radius: 50%;
   border: none;
-  padding: 0; /* Remove padding, use flex for centering */
+  padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 
   svg {
-    width: 24px; /* Adjusted icon size */
-    height: 24px; /* Adjusted icon size */
-    fill: #ffffff; /* White icon color */
-    flex-shrink: 0; /* Added to prevent clipping */
+    width: 24px;
+    height: 24px;
+    fill: #ffffff;
+    flex-shrink: 0;
   }
 
   &:hover {
     background: rgba(255, 255, 255, 0.8);
     svg {
-      fill: #333333; /* Darker icon on hover */
+      fill: #333333;
     }
   }
 `;
@@ -66,7 +65,6 @@ const BadgesSection: React.FC<BadgesSectionProps> = ({ badges }) => {
           {badges.customBadge}
         </TextBadge>
       }
-      {/* TODO: check if here we should display admin badges instead */}
       {badges.groupFullText && 
         <TextBadge>
           {badges.groupFullText}

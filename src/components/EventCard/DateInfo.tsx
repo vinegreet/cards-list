@@ -21,7 +21,7 @@ const DateBox = styled.div`
   background: #F5F2F0;
   border-radius: 5px;
   padding: 5px 10px;
-  min-width: 30px;
+  min-width: 40px;
 `;
 
 const Month = styled.span`

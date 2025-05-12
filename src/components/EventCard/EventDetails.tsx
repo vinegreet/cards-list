@@ -1,15 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
 import SvgEvent from '../SVGs/SvgEvent';
-// import SvgNestClockFarsightAnalog from '../SVGs/SvgNestClockFarsightAnalog'; // Assuming time is part of startDateString for now
 import SvgAttachMoney from '../SVGs/SvgAttachMoney';
 import SvgLocationOn from '../SVGs/SvgLocationOn';
 import LeaderInfo from './LeaderInfo';
-import { Leader as LeaderType } from '../../api/models'; // Import LeaderType
+import { Leader as LeaderType } from '../../api/models';
 
 interface EventDetailsProps {
   name: string;
-  startDateString: string; // Combined date/time string or just date
+  startDateString: string;
   price: string;
   location: string;
   leader: LeaderType;
@@ -42,10 +41,10 @@ const DetailItem = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
-  align-items: flex-start;
+  align-items: center;
   padding: 0px;
   gap: 8px;
-  min-height: 21px;
+  height: 21px;
   
   font-family: 'Heebo', sans-serif;
   font-style: normal;
@@ -59,7 +58,6 @@ const DetailItem = styled.div`
     width: 20px;
     height: 20px;
     fill: #BBBBBB;
-    flex-shrink: 0;
   }
 `;
 
@@ -70,25 +68,16 @@ const EventDetails: React.FC<EventDetailsProps> = ({
   location,
   leader
 }) => {
-  // Helper to format date string if needed, or directly use it
-  // For example, if startDateString is ISO and you want to show only date:
   const displayDate = startDateString !== 'N/A' ? new Date(startDateString).toLocaleDateString() : 'N/A';
-  // If time is separate or needs specific formatting, that logic would go here.
 
   return (
     <DetailsContainer>
       <EventName>{name}</EventName>
       <DetailsList>
         <DetailItem>
-          {displayDate} {/* Or use startDateString directly if format is acceptable */}
+          {displayDate}
           <SvgEvent />
         </DetailItem>
-        {/* 
-        <DetailItem>
-          {startTime} // If you have separate startTime from API 
-          <SvgNestClockFarsightAnalog />
-        </DetailItem>
-        */}
         <DetailItem>
           {price}
           <SvgAttachMoney />
@@ -97,7 +86,7 @@ const EventDetails: React.FC<EventDetailsProps> = ({
           {location}
           <SvgLocationOn />
         </DetailItem>
-        <LeaderInfo name={leader.name} avatar={leader.avatar} /> {/* Pass leader info */}
+        <LeaderInfo name={leader.name} avatar={leader.avatar} />
       </DetailsList>
     </DetailsContainer>
   );

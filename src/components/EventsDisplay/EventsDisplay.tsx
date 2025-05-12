@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { EventsContext, EventsContextType } from '../../logic/context';
-import { Card } from '../Card'; // Assuming Card is in src/components/Card
+import { EventCard } from '../EventCard';
 
 // Styled components moved from App.tsx
 const CardsContainer = styled.div`
@@ -63,7 +63,7 @@ export function EventsDisplay() {
           key={id} 
           ref={index === displayEventIds.length - 1 ? lastCardRef : undefined}
         >
-          <Card eventId={id} />
+          <EventCard eventId={id} />
         </div>
       ))}
       {isLoadingMore && <LoadingIndicator>Loading more events...</LoadingIndicator>}

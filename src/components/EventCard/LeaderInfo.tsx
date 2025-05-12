@@ -1,10 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
-import logo from '../../logo.svg';
 
 interface LeaderInfoProps {
   name: string;
-  avatar?: string;
+  avatar: string;
 }
 
 const LeaderContainer = styled.div`
@@ -55,7 +54,7 @@ const LeaderInfo: React.FC<LeaderInfoProps> = ({ name, avatar }) => {
     <LeaderContainer>
       <LeaderName>{name}</LeaderName>
       <LeaderAvatar>
-        <img src={avatar || logo} alt={`${name}'s Avatar`} />
+        <img src={avatar} alt={`${name}'s Avatar`} />
       </LeaderAvatar>
     </LeaderContainer>
   );
