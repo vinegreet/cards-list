@@ -13,7 +13,6 @@ const BadgesContainer = styled.div`
   gap: 6px;
 `;
 
-// Renamed and restyled for Text Badges (pill-shaped)
 const TextBadge = styled.div`
   background: rgba(255, 255, 255, 0.8);
   color: #333333; /* Dark text color */
@@ -27,7 +26,7 @@ const TextBadge = styled.div`
   justify-content: center;
 `;
 
-// New styled component for Icon Buttons (circular)
+
 const IconButton = styled.button`
   background: rgba(0, 0, 0, 0.1);
   width: 28px;
@@ -62,7 +61,6 @@ interface BadgesSectionProps {
 const BadgesSection: React.FC<BadgesSectionProps> = ({ badges }) => {
   return (
     <BadgesContainer>
-      {/* Display customBadge if it exists */}
       {badges.customBadge && 
         <TextBadge>
           {badges.customBadge}
