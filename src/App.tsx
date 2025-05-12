@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
-import { EventsContext, EventsContextType } from './context';
+import { EventsContext, EventsContextType } from './logic/context';
 import { fetchEventsData } from './api/eventService';
 import { Event as EventType } from './api/models';
 import { EventsDisplay } from './components/EventsDisplay';

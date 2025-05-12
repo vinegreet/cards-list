@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { EventsContext } from '../context'; // Path relative to src/api/
+import { EventsContext } from './context';
 
 // Define the custom hook to use the EventsContext
 export const useEvents = () => {

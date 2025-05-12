@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import PosterOverlay from './PosterOverlay';
 import DateInfo from './DateInfo';
 import EventDetails from './EventDetails';
-import { Event as EventType, Image } from '../../api/models'; // Added Image for typing
-import { useEvents } from '../../api/hooks'; // Corrected import path
+import { Event as EventType, Image } from '../../api/models';
+import { useEvents } from '../../logic/hooks';
 
 const CardContainer = styled.div`
   box-sizing: border-box;

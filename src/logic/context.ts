@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { Event as EventType } from './api/models'; // Path relative to src/
+import { Event as EventType } from '../api/models';
 
 // Define the context type
 export interface EventsContextType {
