@@ -1,8 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
-import SvgAdminPanelSettings from '../SVGs/SvgAdminPanelSettings'; // Placeholder, decide if needed
-import SvgDraft from '../SVGs/SvgDraft'; // Placeholder, decide if needed
-import { Badges as BadgesType } from '../../api/models'; // Import BadgesType
+import SvgAdminPanelSettings from '../SVGs/SvgAdminPanelSettings';
+import SvgDraft from '../SVGs/SvgDraft';
+import { Badges as BadgesType } from '../../api/models';
 
 // TODO: remove this when we have real data
 const isAdmin = true;
