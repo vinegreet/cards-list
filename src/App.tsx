@@ -5,7 +5,7 @@ import { fetchEventsData } from './api/eventService';
 import { Event as EventType } from './api/models';
 import { EventsDisplay } from './components/EventsDisplay';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const MAX_TOTAL_EVENTS = 100;
 
 function App() {

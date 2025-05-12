@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { EventsContext, EventsContextType } from '../../context'; // Adjusted path
 import { Card } from '../Card'; // Assuming Card is in src/components/Card
@@ -7,16 +7,17 @@ import { Card } from '../Card'; // Assuming Card is in src/components/Card
 const CardsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   padding: 20px;
 `;
 
-const LoadMoreButton = styled.button`
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  margin: 20px;
+const LoadingIndicator = styled.div`
+  width: 100%;
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  color: #fff;
 `;
 
 export function EventsDisplay() {
@@ -29,35 +30,43 @@ export function EventsDisplay() {
     canLoadMore,
   } = React.useContext(EventsContext)! as EventsContextType; // Added type assertion for safety
 
+  const observer = useRef<IntersectionObserver>(null);
+  const lastCardRef = useCallback((node: HTMLDivElement) => {
+    if (isLoadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && canLoadMore) {
+        loadMoreEvents();
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [isLoadingMore, canLoadMore, loadMoreEvents]);
+
   if (displayInitialLoading && (!displayEventIds || displayEventIds.length === 0)) {
-    return <div>Loading events...</div>;
+    return <LoadingIndicator>Loading events...</LoadingIndicator>;
   }
 
   if (displayError && (!displayEventIds || displayEventIds.length === 0)) {
-    return <div>Error fetching events: {displayError}</div>;
+    return <LoadingIndicator>Error fetching events: {displayError}</LoadingIndicator>;
   }
 
   if (!displayInitialLoading && (!displayEventIds || displayEventIds.length === 0) && !displayError) {
-    return <div>No events found.</div>;
+    return <LoadingIndicator>No events found.</LoadingIndicator>;
   }
 
   return (
-    <>
-      <CardsContainer>
-        {displayEventIds.map(id => (
-          <Card key={id} eventId={id} />
-        ))}
-      </CardsContainer>
-      {/* Button is always rendered, but its state (text, disabled) changes based on context */}
-      {(displayEventIds && displayEventIds.length > 0) && (
-        <LoadMoreButton onClick={loadMoreEvents} disabled={isLoadingMore || !canLoadMore}>
-          {isLoadingMore
-            ? 'Loading...'
-            : canLoadMore
-            ? 'Load More Events'
-            : 'All Events Loaded'}
-        </LoadMoreButton>
-      )}
-    </>
+    <CardsContainer>
+      {displayEventIds.map((id, index) => (
+        <div 
+          key={id} 
+          ref={index === displayEventIds.length - 1 ? lastCardRef : undefined}
+        >
+          <Card eventId={id} />
+        </div>
+      ))}
+      {isLoadingMore && <LoadingIndicator>Loading more events...</LoadingIndicator>}
+    </CardsContainer>
   );
 } 
