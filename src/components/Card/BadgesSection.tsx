@@ -4,6 +4,7 @@ import SvgAdminPanelSettings from '../SVGs/SvgAdminPanelSettings'; // Placeholde
 import SvgDraft from '../SVGs/SvgDraft'; // Placeholder, decide if needed
 import { Badges as BadgesType } from '../../api/models'; // Import BadgesType
 
+// TODO: remove this when we have real data
 const isAdmin = true;
 
 const BadgesContainer = styled.div`
@@ -42,14 +43,14 @@ const IconButton = styled.button`
   svg {
     width: 24px; /* Adjusted icon size */
     height: 24px; /* Adjusted icon size */
-    fill: #333333; /* Dark icon color */
+    fill: #ffffff; /* White icon color */
     flex-shrink: 0; /* Added to prevent clipping */
   }
 
   &:hover {
     background: rgba(255, 255, 255, 0.8);
     svg {
-      fill: #000000; /* Darker icon on hover */
+      fill: #333333; /* Darker icon on hover */
     }
   }
 `;
