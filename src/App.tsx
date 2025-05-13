@@ -32,9 +32,7 @@ function App() {
   }, [loadPage, totalLoadedPages]);
 
   const handleLoadMore = () => {
-    console.log('handleLoadMore 1')
     if (!loading && !isLoadingMore && totalLoadedPages < 20) {
-      console.log('handleLoadMore 2')
       const nextPage = currentPage + 1;
       loadPage(nextPage);
       prefetchNextPages(nextPage);

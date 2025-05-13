@@ -58,26 +58,20 @@ export const usePageLoader = () => {
   const pageNumbersCurrentlyLoading_ref = useRef<Set<number>>(new Set());
 
   const loadPage = useCallback(async (pageNumber: number, shouldPrefetch: boolean = false) => {
-    console.log('[loadPage attempt]', { pageNumber, shouldPrefetch, isRefBusy: pageNumbersCurrentlyLoading_ref.current.has(pageNumber), isStateLoaded: state.pages[pageNumber]?.isLoaded, currentTotalPages: state.totalLoadedPages });
-
     if (pageNumbersCurrentlyLoading_ref.current.has(pageNumber)) {
-      console.log(`[loadPage skip] Page ${pageNumber} is already being fetched (ref check).`);
       return;
     }
 
     // Handle already loaded pages (e.g. prefetched page being directly loaded now)
     if (state.pages[pageNumber]?.isLoaded) {
-      console.log(`[loadPage info] Page ${pageNumber} is already loaded in state.`);
       if (!shouldPrefetch) {
         // This is a direct load attempt for an already loaded page.
         // Update currentPage if it's advancing, and ensure loading flags are off.
         setState(prev => {
           if (pageNumber > prev.currentPage) {
-            console.log(`[loadPage update] Advancing currentPage from ${prev.currentPage} to ${pageNumber} for already loaded page (direct load).`);
             return { ...prev, currentPage: pageNumber, isInitialLoading: false, isPrefetching: false };
           } else if (pageNumber === prev.currentPage && (prev.isInitialLoading || prev.isPrefetching)) {
             // If loading current page again (e.g. initial load completed by prefetch, then direct load called)
-            console.log(`[loadPage update] Clearing loading flags for already loaded currentPage ${pageNumber}.`);
             return { ...prev, isInitialLoading: false, isPrefetching: false };
           }
           return prev; // No change needed if not advancing or not clearing flags
@@ -89,12 +83,9 @@ export const usePageLoader = () => {
 
     // Guard for total page limit if the page is NOT yet loaded
     if (state.totalLoadedPages >= 20) {
-      console.log(`[loadPage skip] Page ${pageNumber} not loaded, but total loaded pages limit (20) reached. Total: ${state.totalLoadedPages}.`);
       return;
     }
     
-    console.log(`[loadPage proceed] To fetch page ${pageNumber}. Current totalLoadedPages: ${state.totalLoadedPages}`);
-
     try {
       pageNumbersCurrentlyLoading_ref.current.add(pageNumber);
       setPageNumbersCurrentlyLoadingState(prev => new Set(prev).add(pageNumber));
@@ -111,8 +102,6 @@ export const usePageLoader = () => {
         setEventsMappedById(prev => ({ ...prev, ...mappedById }));
         setState(prev => {
           const newCurrentPage = !shouldPrefetch && pageNumber > prev.currentPage ? pageNumber : prev.currentPage;
-          console.log('[loadPage setState after fetch]', { pageNumber, idsCount: ids.length, oldCurrentPage: prev.currentPage, newCurrentPage, oldTotalLoaded: prev.totalLoadedPages, newTotalLoaded: prev.totalLoadedPages + 1, shouldPrefetch });
-
           return {
             ...prev,
             pages: {
@@ -131,7 +120,6 @@ export const usePageLoader = () => {
           };
         });
       } else {
-        console.log(`[loadPage info] Page ${pageNumber} fetched 0 events.`);
         if (pageNumber === 1 && !shouldPrefetch) {
             setState(prev => ({...prev, isInitialLoading: false, isPrefetching: false }));
         }
@@ -152,12 +140,9 @@ export const usePageLoader = () => {
       setPageNumbersCurrentlyLoadingState(prev => {
         const next = new Set(prev);
         next.delete(pageNumber);
-        console.log(`[loadPage finally] Page ${pageNumber}. Ref count: ${pageNumbersCurrentlyLoading_ref.current.size}. State set count: ${next.size}`);
-        // If all `loadPage` operations (including prefetches) are done, ensure isPrefetching is false.
         if (pageNumbersCurrentlyLoading_ref.current.size === 0) {
             setState(currentInternalState => {
               if (currentInternalState.isPrefetching) {
-                console.log('[loadPage finally] All page loads complete, ensuring isPrefetching is false.');
                 return { ...currentInternalState, isPrefetching: false };
               }
               return currentInternalState;
@@ -169,10 +154,7 @@ export const usePageLoader = () => {
   }, [state.pages, state.totalLoadedPages, state.currentPage, pageNumbersCurrentlyLoadingState, setState, setEventsMappedById, setError, setPageNumbersCurrentlyLoadingState]); 
 
   const prefetchNextPages = useCallback((currentPageFromCaller: number) => {
-    console.log(`[prefetchNextPages attempt] Current isPrefetching state: ${state.isPrefetching}, totalLoadedPages: ${state.totalLoadedPages}, called with currentPage: ${currentPageFromCaller}`);
     if (state.isPrefetching || state.totalLoadedPages >= 20) {
-        if(state.isPrefetching) console.log('[prefetchNextPages skip] Already prefetching (state check).');
-        if(state.totalLoadedPages >= 20) console.log('[prefetchNextPages skip] Total loaded pages limit reached.');
         return;
     }
 
@@ -180,27 +162,21 @@ export const usePageLoader = () => {
     for (let i = 1; i <= PREFETCH_WINDOW; i++) {
       const nextPageToPrefetch = currentPageFromCaller + i;
       if (nextPageToPrefetch > 20) { // Assuming 20 is the max page number based on MAX_TOTAL_EVENTS/PAGE_SIZE
-        console.log(`[prefetchNextPages info] Skipping prefetch for page ${nextPageToPrefetch} as it exceeds page limit 20.`);
         continue;
       }
 
       if (!state.pages[nextPageToPrefetch]?.isLoaded && !pageNumbersCurrentlyLoading_ref.current.has(nextPageToPrefetch)) {
-        console.log(`[prefetchNextPages action] Calling loadPage to prefetch page ${nextPageToPrefetch} (from current main page ${currentPageFromCaller})`);
         loadPage(nextPageToPrefetch, true); 
         if (!didInitiatePrefetch) {
             setState(prev => ({ ...prev, isPrefetching: true })); 
             didInitiatePrefetch = true;
-            console.log(`[prefetchNextPages info] Set isPrefetching to true because prefetch for ${nextPageToPrefetch} was initiated.`);
         }
-      } else {
-        console.log(`[prefetchNextPages info] Skipping prefetch for page ${nextPageToPrefetch}: isLoaded=${state.pages[nextPageToPrefetch]?.isLoaded}, isInRef=${pageNumbersCurrentlyLoading_ref.current.has(nextPageToPrefetch)}`);
       }
     }
     // If no prefetch was actually initiated (e.g., all target pages already loaded/loading, or window is empty)
     // and the state still thinks it's prefetching, turn it off.
     if (!didInitiatePrefetch && state.isPrefetching) {
         setState(prev => ({ ...prev, isPrefetching: false }));
-        console.log('[prefetchNextPages info] No prefetch initiated in this call, ensuring isPrefetching is false.');
     }
 
   }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, pageNumbersCurrentlyLoadingState]);

@@ -49,9 +49,7 @@ export function EventsDisplay() {
     };
 
     const handleIntersect = (entries: IntersectionObserverEntry[]) => {
-      console.log('Intersection detected:', entries[0].isIntersecting);
       if (entries[0].isIntersecting && canLoadMore && !isLoadingMore) {
-        console.log('Loading more events...');
         loadMoreEvents();
       }
     };
