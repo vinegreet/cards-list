@@ -1,4 +1,4 @@
-import { useContext, useCallback, useRef, useState } from 'react';
+import { useContext, useCallback, useRef, useState, useEffect } from 'react';
 import { EventsContext } from './context';
 import { fetchEventsData } from '../api/eventService';
 import { Event as EventType } from '../api/models';
@@ -34,7 +34,8 @@ interface EventsState {
 }
 
 const PAGE_SIZE = 5;
-const PREFETCH_WINDOW = 5; // Number of pages to prefetch ahead
+const FIRST_BATCH = 2; // Number of pages to fetch directly when first loading
+const PREFETCH_BATCH = 5; // Number of pages to prefetch ahead
 // TODO: switch to 20 pages, but only prefetch when current events loaded their assets
 
 /**
@@ -43,6 +44,12 @@ const PREFETCH_WINDOW = 5; // Number of pages to prefetch ahead
  * individual event data mapped by ID, loading indicators (initial, more, prefetching), 
  * error states, and provides functions to load and prefetch pages.
  * This hook encapsulates the core logic for lazy loading and prefetching event items.
+ *
+ * Key features:
+ * - Loads event data page by page, with a hard limit of 20 pages.
+ * - Prefetches a batch of pages (PREFETCH_BATCH) ahead when needed.
+ * - Ensures prefetching is only considered complete when all pages in the batch are loaded.
+ * - Prevents duplicate loads and manages loading state for both direct and prefetch loads.
  */
 export const usePageLoader = () => {
   const [state, setState] = useState<EventsState>({
@@ -54,61 +61,67 @@ export const usePageLoader = () => {
     totalPages: null,
   });
 
+  // Stores all event data mapped by event ID for fast lookup and rendering
   const [eventsMappedById, setEventsMappedById] = useState<Record<number, EventType>>({});
+  // Holds any error message encountered during loading
   const [error, setError] = useState<string | null>(null);
-  const [pageNumbersCurrentlyLoadingState, setPageNumbersCurrentlyLoadingState] = useState<Set<number>>(new Set());
+  // Tracks which page numbers are currently being loaded to prevent duplicate requests
   const pageNumbersCurrentlyLoading_ref = useRef<Set<number>>(new Set());
 
+  // Used to reference the latest prefetchNextPages function for use in callbacks
+  const prefetchNextPagesRef = useRef<((currentPageFromCaller: number) => void) | null>(null);
+  // Tracks the set of pages being prefetched in the current batch; used to determine when prefetching is complete
+  const prefetchingPages_ref = useRef<Set<number>>(new Set());
+
   const loadPage = useCallback(async (pageNumber: number, shouldPrefetch: boolean = false) => {
+    // Prevent duplicate loads for the same page
     if (pageNumbersCurrentlyLoading_ref.current.has(pageNumber)) {
       return;
     }
 
-    // Prevent fetching if pageNumber exceeds totalPages
+    // If we've already reached the last page, don't load further
     if (state.totalPages !== null && pageNumber > state.totalPages) {
-      // If it's a direct load attempt for a page beyond totalPages,
-      // and we thought we could load more, update isPrefetching just in case.
-      // This might happen if totalPages was updated after a prefetch was queued.
+      // If this was a direct load and prefetching is still marked, clear it
       if (!shouldPrefetch && state.isPrefetching) {
          setState(prev => ({ ...prev, isPrefetching: false }));
       }
       return;
     }
 
-    // Handle already loaded pages (e.g. prefetched page being directly loaded now)
+    // If the page is already loaded, update state if needed and return
     if (state.pages[pageNumber]?.isLoaded) {
       if (!shouldPrefetch) {
-        // This is a direct load attempt for an already loaded page.
-        // Update currentPage if it's advancing, and ensure loading flags are off.
         setState(prev => {
           if (pageNumber > prev.currentPage) {
+            // Navigating forward: update current page and clear loading states
             return { ...prev, currentPage: pageNumber, isInitialLoading: false, isPrefetching: false };
           } else if (pageNumber === prev.currentPage && (prev.isInitialLoading || prev.isPrefetching)) {
-            // If loading current page again (e.g. initial load completed by prefetch, then direct load called)
+            // If we're on the same page and still marked as loading, clear loading states
             return { ...prev, isInitialLoading: false, isPrefetching: false };
           }
-          return prev; // No change needed if not advancing or not clearing flags
+          return prev;
         });
       }
-      // For prefetches of already loaded pages, or direct loads not advancing currentPage, nothing more to do here.
       return;
     }
 
-    // Guard for total page limit if the page is NOT yet loaded
-    // Also, ensure we don't try to load beyond known totalPages if available
+    // Enforce a hard limit of 20 pages
     if (state.totalLoadedPages >= 20 || (state.totalPages !== null && pageNumber > state.totalPages)) {
       return;
     }
     
     try {
       pageNumbersCurrentlyLoading_ref.current.add(pageNumber);
-      setPageNumbersCurrentlyLoadingState(prev => new Set(prev).add(pageNumber));
-
+      // Track this page as part of the current prefetch batch if prefetching
+      if (shouldPrefetch) {
+        prefetchingPages_ref.current.add(pageNumber);
+      }
+      // For direct loads, set initial loading state and ensure prefetching is marked false.
       if (!shouldPrefetch) {
         setState(prev => ({ ...prev, isInitialLoading: pageNumber === 1 && !prev.pages[1]?.isLoaded, isPrefetching: false }));
-      } else {
-        setState(prev => ({ ...prev, isPrefetching: true }));
       }
+      // NOTE: If shouldPrefetch is true, we NO LONGER set isPrefetching: true here.
+      // This will be managed by prefetchNextPages for the batch.
 
       const { ids, mappedById, fetchedCount, paginationInfo } = await fetchEventsData(pageNumber, PAGE_SIZE);
 
@@ -118,8 +131,7 @@ export const usePageLoader = () => {
           const newCurrentPage = !shouldPrefetch && pageNumber > prev.currentPage ? pageNumber : prev.currentPage;
           const newTotalPages = paginationInfo?.totalPages !== undefined ? paginationInfo.totalPages : prev.totalPages;
 
-          return {
-            ...prev,
+          const updatePayload: Partial<EventsState> = {
             pages: {
               ...prev.pages,
               [pageNumber]: {
@@ -131,117 +143,135 @@ export const usePageLoader = () => {
             },
             totalLoadedPages: prev.totalLoadedPages + 1, 
             currentPage: newCurrentPage, 
-            isInitialLoading: prev.isInitialLoading && pageNumber === 1 ? false : prev.isInitialLoading,
-            isPrefetching: shouldPrefetch ? prev.isPrefetching : false,
+            isInitialLoading: prev.isInitialLoading && pageNumber === 1 && !shouldPrefetch ? false : prev.isInitialLoading,
             totalPages: newTotalPages,
           };
+
+          if (!shouldPrefetch) {
+            updatePayload.isPrefetching = false;
+          }
+          // If shouldPrefetch is true, isPrefetching is NOT included in updatePayload,
+          // so it preserves the value set by prefetchNextPages (true) or a previous direct load (false).
+
+          return { ...prev, ...updatePayload };
         });
-        // If this was the initial load of page 1, trigger prefetch for subsequent pages.
-        if (pageNumber === 1 && !shouldPrefetch) {
-          // We need to ensure prefetchNextPages has access to the updated state (like totalPages)
-          // So we pass the potentially updated totalPages and current page directly,
-          // or rely on it being called in a subsequent render cycle after state is set.
-          // A direct call here might use stale state for totalPages if not careful.
-          // Let's call it via a microtask to ensure state update has occurred.
+        // After loading the first page directly, trigger prefetch for the next batch
+        if (pageNumber === 1 && !shouldPrefetch && prefetchNextPagesRef.current) {
           Promise.resolve().then(() => {
-            // Re-access state here or ensure prefetchNextPages uses its own up-to-date state.
-            // For simplicity, prefetchNextPages already reads the latest state.
-            prefetchNextPages(1); 
+            if (prefetchNextPagesRef.current) {
+              prefetchNextPagesRef.current(1);
+            }
           });
         }
       } else {
-        // If no events were fetched, it might be an empty page or past the last page.
-        // Update totalPages if this fetch gives us that info (e.g. if API confirms current page is out of bounds by returning totalPages)
-        // Or, if this was page 1 and it's empty, it implies 0 or 1 total pages.
         setState(prev => {
             const newTotalPages = paginationInfo?.totalPages !== undefined ? paginationInfo.totalPages : prev.totalPages;
             let finalTotalPages = newTotalPages;
 
-            // If the current page number is greater than the reported totalPages,
-            // or if fetchedCount is 0 (and we have totalPages info),
-            // it's good to ensure our state.totalPages reflects the reality.
+            // If we know the total pages and this page is past the end, set finalTotalPages
             if (newTotalPages !== null && pageNumber > newTotalPages) {
                 finalTotalPages = newTotalPages;
-            } else if (fetchedCount === 0 && newTotalPages !== null) {
-                 // If we fetched 0 events, and we know totalPages,
-                 // and the current pageNumber is within this known totalPages,
-                 // this implies this page is empty but valid.
-                 // If pageNumber is greater than newTotalPages, it means we already are past the end.
-                 // If pageNumber *is* newTotalPages and it's empty, then that's the end.
-                 // If pageNumber is less than newTotalPages and it's empty, it's an empty page.
-                 // No specific change to finalTotalPages based on this alone unless pageNumber > newTotalPages
             } else if (fetchedCount === 0 && newTotalPages === null && pageNumber === 1) {
-                // If page 1 is empty and we don't know total pages yet, assume totalPages is 1 (or 0).
-                // Setting to 1 to prevent further fetches unless API says otherwise later.
+                // If no items at all, set totalPages to 1
                 finalTotalPages = 1; 
             }
 
-
-            if (pageNumber === 1 && !shouldPrefetch) {
+            if (!shouldPrefetch) { // Direct load resulting in no items
                 return {...prev, isInitialLoading: false, isPrefetching: false, totalPages: finalTotalPages };
             }
-            // For other cases (prefetch returning 0, or non-initial load returning 0)
-            // update totalPages and ensure prefetching flag is handled.
-            // If this was a prefetch that returned 0 items, and we are still prefetching,
-            // this specific loadPage call should not by itself turn off global isPrefetching,
-            // as other prefetches might be in progress. The finally block handles global isPrefetching.
+            // Prefetch load resulting in no items, just update totalPages. isPrefetching not touched here.
             return {...prev, totalPages: finalTotalPages};
         });
       }
     } catch (e: any) {
+      // Handle errors and clear loading state as appropriate
       console.error(`[loadPage error] For page ${pageNumber}:`, e);
       setError(e.message);
-      setState(prev => ({
-        ...prev,
-        isInitialLoading: false, 
-        isPrefetching: false 
-      }));
+      setState(prev => {
+        const updatePayload: Partial<EventsState> = {
+          isInitialLoading: (prev.isInitialLoading && pageNumber === 1 && !shouldPrefetch) ? false : prev.isInitialLoading,
+        };
+        if (!shouldPrefetch) {
+          updatePayload.isPrefetching = false;
+        }
+        // If shouldPrefetch is true, isPrefetching is NOT included in updatePayload.
+
+        return { ...prev, ...updatePayload };
+      });
     } finally {
       pageNumbersCurrentlyLoading_ref.current.delete(pageNumber);
-      setPageNumbersCurrentlyLoadingState(prev => {
-        const next = new Set(prev);
-        next.delete(pageNumber);
-        if (pageNumbersCurrentlyLoading_ref.current.size === 0) {
-            setState(currentInternalState => {
-              if (currentInternalState.isPrefetching) {
-                return { ...currentInternalState, isPrefetching: false };
-              }
-              return currentInternalState;
-            });
-        }
-        return next;
-      });
+      if (shouldPrefetch) {
+        prefetchingPages_ref.current.delete(pageNumber);
+      }
+      // Only set isPrefetching to false when all prefetching pages are done
+      if (shouldPrefetch && prefetchingPages_ref.current.size === 0) {
+        setState(currentInternalState => {
+          if (currentInternalState.isPrefetching) {
+            return { ...currentInternalState, isPrefetching: false };
+          }
+          return currentInternalState;
+        });
+      } else if (!shouldPrefetch && pageNumbersCurrentlyLoading_ref.current.size === 0) {
+        setState(currentInternalState => {
+          if (currentInternalState.isPrefetching) {
+            return { ...currentInternalState, isPrefetching: false };
+          }
+          return currentInternalState;
+        });
+      }
     }
-  }, [state.pages, state.totalLoadedPages, state.currentPage, state.totalPages, setState, setEventsMappedById, setError, setPageNumbersCurrentlyLoadingState]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pages, state.totalLoadedPages, state.currentPage, state.totalPages, setState, setEventsMappedById, setError /* prefetchNextPagesRef.current will be stable via ref */]); 
 
+  useEffect(() => {
+    // On initial mount, fetch FIRST_BATCH pages in parallel
+    if (state.totalLoadedPages === 0) {
+      for (let i = 1; i <= FIRST_BATCH; i++) {
+        loadPage(i, false); // false: not a prefetch, but initial batch
+      }
+    }
+  }, [loadPage, state.totalLoadedPages]);
+
+  /**
+   * Prefetches the next PREFETCH_BATCH pages after the current page, as a batch.
+   * Will not start a new batch if already prefetching, or if at the page/data limit.
+   * Only sets isPrefetching to false after all pages in the batch are loaded.
+   */
   const prefetchNextPages = useCallback((currentPageFromCaller: number) => {
+    // Do not prefetch if already prefetching, or if at the page/data limit
     if (state.isPrefetching || state.totalLoadedPages >= 20 || (state.totalPages !== null && currentPageFromCaller >= state.totalPages)) {
         return;
     }
 
-    let didInitiatePrefetch = false;
-    for (let i = 1; i <= PREFETCH_WINDOW; i++) {
+    const pagesToAttemptPrefetch: number[] = [];
+    for (let i = 1; i <= PREFETCH_BATCH; i++) {
       const nextPageToPrefetch = currentPageFromCaller + i;
-      // Stop prefetching if nextPageToPrefetch exceeds totalPages or the 20-page hard limit
+      // Stop if we hit known total pages or hard limit
       if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || nextPageToPrefetch > 20) {
-        continue;
+        break; 
       }
-
+      // Only prefetch pages that are not already loaded or loading
       if (!state.pages[nextPageToPrefetch]?.isLoaded && !pageNumbersCurrentlyLoading_ref.current.has(nextPageToPrefetch)) {
-        loadPage(nextPageToPrefetch, true); 
-        if (!didInitiatePrefetch) {
-            setState(prev => ({ ...prev, isPrefetching: true })); 
-            didInitiatePrefetch = true;
-        }
+        pagesToAttemptPrefetch.push(nextPageToPrefetch);
       }
     }
-    // If no prefetch was actually initiated (e.g., all target pages already loaded/loading, or window is empty)
-    // and the state still thinks it's prefetching, turn it off.
-    if (!didInitiatePrefetch && state.isPrefetching) {
-        setState(prev => ({ ...prev, isPrefetching: false }));
-    }
 
-  }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, pageNumbersCurrentlyLoadingState, state.totalPages]);
+    if (pagesToAttemptPrefetch.length > 0) {
+      // Track the batch of prefetching pages
+      prefetchingPages_ref.current = new Set(pagesToAttemptPrefetch);
+      setState(prev => ({ ...prev, isPrefetching: true }));
+      pagesToAttemptPrefetch.forEach(pageNumber => {
+        loadPage(pageNumber, true); // shouldPrefetch is true
+      });
+    }
+    // isPrefetching will be set to false by the finally block in the last loadPage call from this batch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, state.totalPages, pageNumbersCurrentlyLoading_ref]); // pageNumbersCurrentlyLoading_ref is stable
+
+  // Assign to ref for loadPage
+  useEffect(() => {
+    prefetchNextPagesRef.current = prefetchNextPages;
+  }, [prefetchNextPages]);
 
   const getVisibleEventIds = useCallback(() => {
     const visibleIds: number[] = [];
@@ -259,10 +289,9 @@ export const usePageLoader = () => {
     loading: state.isInitialLoading,
     isLoadingMore: state.isPrefetching || (pageNumbersCurrentlyLoading_ref.current.size > 0 && !state.isInitialLoading),
     error,
-    loadPage,
     prefetchNextPages,
-    currentPage: state.currentPage,
-    totalLoadedPages: state.totalLoadedPages,
+    canLoadMore: state.totalPages === null || Object.keys(state.pages).length < state.totalPages,
+    lastLoadedPage: state.totalLoadedPages,
     totalPages: state.totalPages,
   };
 };

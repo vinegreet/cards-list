@@ -21,26 +21,14 @@ function App() {
     error,
     loadPage,
     prefetchNextPages,
+    canLoadMore,
     currentPage,
-    totalLoadedPages,
-    totalPages,
+    lastLoadedPage,
   } = usePageLoader();
 
-  useEffect(() => {
-    if (totalLoadedPages === 0) {
-      loadPage(1);
-    }
-  }, [loadPage, totalLoadedPages]);
-
   const handleLoadMore = () => {
-    const canActuallyLoadMore = totalPages === null
-      ? totalLoadedPages < 20
-      : currentPage < totalPages;
-
-    if (!loading && !isLoadingMore && canActuallyLoadMore && totalLoadedPages < 20) {
-      const nextPage = currentPage + 1;
-      loadPage(nextPage);
-      prefetchNextPages(nextPage);
+    if (!loading && !isLoadingMore && canLoadMore) {
+      prefetchNextPages(lastLoadedPage);
     }
   };
 
@@ -51,9 +39,7 @@ function App() {
     error,
     loadMoreEvents: handleLoadMore,
     isLoadingMore,
-    canLoadMore: totalPages === null
-      ? totalLoadedPages < 20
-      : currentPage < totalPages && totalLoadedPages < 20
+    canLoadMore,
   };
 
   return (
