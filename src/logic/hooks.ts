@@ -30,6 +30,7 @@ interface EventsState {
   totalLoadedPages: number;
   isInitialLoading: boolean;
   isPrefetching: boolean;
+  totalPages: number | null;
 }
 
 const PAGE_SIZE = 5;
@@ -49,7 +50,8 @@ export const usePageLoader = () => {
     currentPage: 1,
     totalLoadedPages: 0,
     isInitialLoading: true,
-    isPrefetching: false
+    isPrefetching: false,
+    totalPages: null,
   });
 
   const [eventsMappedById, setEventsMappedById] = useState<Record<number, EventType>>({});
@@ -59,6 +61,17 @@ export const usePageLoader = () => {
 
   const loadPage = useCallback(async (pageNumber: number, shouldPrefetch: boolean = false) => {
     if (pageNumbersCurrentlyLoading_ref.current.has(pageNumber)) {
+      return;
+    }
+
+    // Prevent fetching if pageNumber exceeds totalPages
+    if (state.totalPages !== null && pageNumber > state.totalPages) {
+      // If it's a direct load attempt for a page beyond totalPages,
+      // and we thought we could load more, update isPrefetching just in case.
+      // This might happen if totalPages was updated after a prefetch was queued.
+      if (!shouldPrefetch && state.isPrefetching) {
+         setState(prev => ({ ...prev, isPrefetching: false }));
+      }
       return;
     }
 
@@ -82,7 +95,8 @@ export const usePageLoader = () => {
     }
 
     // Guard for total page limit if the page is NOT yet loaded
-    if (state.totalLoadedPages >= 20) {
+    // Also, ensure we don't try to load beyond known totalPages if available
+    if (state.totalLoadedPages >= 20 || (state.totalPages !== null && pageNumber > state.totalPages)) {
       return;
     }
     
@@ -96,12 +110,14 @@ export const usePageLoader = () => {
         setState(prev => ({ ...prev, isPrefetching: true }));
       }
 
-      const { ids, mappedById, fetchedCount } = await fetchEventsData(pageNumber, PAGE_SIZE);
+      const { ids, mappedById, fetchedCount, paginationInfo } = await fetchEventsData(pageNumber, PAGE_SIZE);
 
       if (fetchedCount > 0) {
         setEventsMappedById(prev => ({ ...prev, ...mappedById }));
         setState(prev => {
           const newCurrentPage = !shouldPrefetch && pageNumber > prev.currentPage ? pageNumber : prev.currentPage;
+          const newTotalPages = paginationInfo?.totalPages !== undefined ? paginationInfo.totalPages : prev.totalPages;
+
           return {
             ...prev,
             pages: {
@@ -116,16 +132,48 @@ export const usePageLoader = () => {
             totalLoadedPages: prev.totalLoadedPages + 1, 
             currentPage: newCurrentPage, 
             isInitialLoading: prev.isInitialLoading && pageNumber === 1 ? false : prev.isInitialLoading,
-            isPrefetching: shouldPrefetch ? prev.isPrefetching : false // if direct load, prefetching is false. if prefetch, maintain current prefetching state (could be true from other prefetches)
+            isPrefetching: shouldPrefetch ? prev.isPrefetching : false,
+            totalPages: newTotalPages,
           };
         });
       } else {
-        if (pageNumber === 1 && !shouldPrefetch) {
-            setState(prev => ({...prev, isInitialLoading: false, isPrefetching: false }));
-        }
-        // If a prefetch returns 0 events, it might mean the end of data. Clear its own prefetching contribution.
-        // This is tricky; the main isPrefetching flag is managed more broadly.
-        // For now, if a specific prefetch yields nothing, it just doesn't add to pages.
+        // If no events were fetched, it might be an empty page or past the last page.
+        // Update totalPages if this fetch gives us that info (e.g. if API confirms current page is out of bounds by returning totalPages)
+        // Or, if this was page 1 and it's empty, it implies 0 or 1 total pages.
+        setState(prev => {
+            const newTotalPages = paginationInfo?.totalPages !== undefined ? paginationInfo.totalPages : prev.totalPages;
+            let finalTotalPages = newTotalPages;
+
+            // If the current page number is greater than the reported totalPages,
+            // or if fetchedCount is 0 (and we have totalPages info),
+            // it's good to ensure our state.totalPages reflects the reality.
+            if (newTotalPages !== null && pageNumber > newTotalPages) {
+                finalTotalPages = newTotalPages;
+            } else if (fetchedCount === 0 && newTotalPages !== null) {
+                 // If we fetched 0 events, and we know totalPages,
+                 // and the current pageNumber is within this known totalPages,
+                 // this implies this page is empty but valid.
+                 // If pageNumber is greater than newTotalPages, it means we already are past the end.
+                 // If pageNumber *is* newTotalPages and it's empty, then that's the end.
+                 // If pageNumber is less than newTotalPages and it's empty, it's an empty page.
+                 // No specific change to finalTotalPages based on this alone unless pageNumber > newTotalPages
+            } else if (fetchedCount === 0 && newTotalPages === null && pageNumber === 1) {
+                // If page 1 is empty and we don't know total pages yet, assume totalPages is 1 (or 0).
+                // Setting to 1 to prevent further fetches unless API says otherwise later.
+                finalTotalPages = 1; 
+            }
+
+
+            if (pageNumber === 1 && !shouldPrefetch) {
+                return {...prev, isInitialLoading: false, isPrefetching: false, totalPages: finalTotalPages };
+            }
+            // For other cases (prefetch returning 0, or non-initial load returning 0)
+            // update totalPages and ensure prefetching flag is handled.
+            // If this was a prefetch that returned 0 items, and we are still prefetching,
+            // this specific loadPage call should not by itself turn off global isPrefetching,
+            // as other prefetches might be in progress. The finally block handles global isPrefetching.
+            return {...prev, totalPages: finalTotalPages};
+        });
       }
     } catch (e: any) {
       console.error(`[loadPage error] For page ${pageNumber}:`, e);
@@ -151,17 +199,18 @@ export const usePageLoader = () => {
         return next;
       });
     }
-  }, [state.pages, state.totalLoadedPages, state.currentPage, pageNumbersCurrentlyLoadingState, setState, setEventsMappedById, setError, setPageNumbersCurrentlyLoadingState]); 
+  }, [state.pages, state.totalLoadedPages, state.currentPage, state.totalPages, setState, setEventsMappedById, setError, setPageNumbersCurrentlyLoadingState]); 
 
   const prefetchNextPages = useCallback((currentPageFromCaller: number) => {
-    if (state.isPrefetching || state.totalLoadedPages >= 20) {
+    if (state.isPrefetching || state.totalLoadedPages >= 20 || (state.totalPages !== null && currentPageFromCaller >= state.totalPages)) {
         return;
     }
 
     let didInitiatePrefetch = false;
     for (let i = 1; i <= PREFETCH_WINDOW; i++) {
       const nextPageToPrefetch = currentPageFromCaller + i;
-      if (nextPageToPrefetch > 20) { // Assuming 20 is the max page number based on MAX_TOTAL_EVENTS/PAGE_SIZE
+      // Stop prefetching if nextPageToPrefetch exceeds totalPages or the 20-page hard limit
+      if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || nextPageToPrefetch > 20) {
         continue;
       }
 
@@ -200,7 +249,8 @@ export const usePageLoader = () => {
     loadPage,
     prefetchNextPages,
     currentPage: state.currentPage,
-    totalLoadedPages: state.totalLoadedPages
+    totalLoadedPages: state.totalLoadedPages,
+    totalPages: state.totalPages,
   };
 };
 

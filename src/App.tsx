@@ -22,7 +22,8 @@ function App() {
     loadPage,
     prefetchNextPages,
     currentPage,
-    totalLoadedPages
+    totalLoadedPages,
+    totalPages,
   } = usePageLoader();
 
   useEffect(() => {
@@ -32,7 +33,11 @@ function App() {
   }, [loadPage, totalLoadedPages]);
 
   const handleLoadMore = () => {
-    if (!loading && !isLoadingMore && totalLoadedPages < 20) {
+    const canActuallyLoadMore = totalPages === null
+      ? totalLoadedPages < 20
+      : currentPage < totalPages;
+
+    if (!loading && !isLoadingMore && canActuallyLoadMore && totalLoadedPages < 20) {
       const nextPage = currentPage + 1;
       loadPage(nextPage);
       prefetchNextPages(nextPage);
@@ -46,7 +51,9 @@ function App() {
     error,
     loadMoreEvents: handleLoadMore,
     isLoadingMore,
-    canLoadMore: totalLoadedPages < 20
+    canLoadMore: totalPages === null
+      ? totalLoadedPages < 20
+      : currentPage < totalPages && totalLoadedPages < 20
   };
 
   return (
