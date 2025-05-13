@@ -41,10 +41,10 @@ const DetailItem = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
-  align-items: center;
+  align-items: flex-start;
   padding: 0px;
   gap: 8px;
-  height: 21px;
+  min-height: 21px;
   
   font-family: 'Heebo', sans-serif;
   font-style: normal;
@@ -58,6 +58,7 @@ const DetailItem = styled.div`
     width: 20px;
     height: 20px;
     fill: #BBBBBB;
+    flex-shrink: 0;
   }
 `;
 
