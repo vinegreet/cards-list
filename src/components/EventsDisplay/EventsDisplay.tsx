@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { EventsContext, EventsContextType } from '../../logic/context';
 import { EventCard } from '../EventCard';
+import { AnimatedLoader } from '../styling/Loaders';
 
 // Styled components moved from App.tsx
 const CardsContainer = styled.div`
@@ -85,7 +86,7 @@ export function EventsDisplay() {
         <EventCard key={id} eventId={id} />
       ))}
       <Sentinel ref={sentinelRef} />
-      {isLoadingMore && <LoadingIndicator>Loading more events...</LoadingIndicator>}
+      {isLoadingMore && <AnimatedLoader />}
     </CardsContainer>
   );
 } 
