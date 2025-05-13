@@ -3,9 +3,7 @@ import styled from 'styled-components';
 import { EventsContext, EventsContextType } from '../../logic/context';
 import { EventCard } from '../EventCard';
 import { AnimatedLoader } from '../styling/Loaders';
-
-// Number of screen heights for the pre-fetch to be triggered
-const PREFETCH_TRIGGER_DISTANCE = 3;
+import { PREFETCH_TRIGGER_DISTANCE } from '../../logic/config';
 
 // Styled components moved from App.tsx
 const CardsContainer = styled.div`

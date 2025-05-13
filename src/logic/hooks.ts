@@ -2,6 +2,7 @@ import { useContext, useCallback, useRef, useState, useEffect } from 'react';
 import { EventsContext } from './context';
 import { fetchEventsData } from '../api/eventService';
 import { Event as EventType } from '../api/models';
+import { FIRST_BATCH, PAGE_SIZE, PREFETCH_BATCH } from './config';
 
 // Define the custom hook to use the EventsContext
 /**
@@ -32,11 +33,6 @@ interface EventsState {
   isPrefetching: boolean;
   totalPages: number | null;
 }
-
-const PAGE_SIZE = 5;
-const FIRST_BATCH = 2; // Number of pages to fetch directly when first loading
-const PREFETCH_BATCH = 5; // Number of pages to prefetch ahead
-// TODO: switch to 20 pages, but only prefetch when current events loaded their assets
 
 /**
  * `usePageLoader` is a custom hook responsible for managing the fetching, caching, 
