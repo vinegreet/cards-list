@@ -136,6 +136,19 @@ export const usePageLoader = () => {
             totalPages: newTotalPages,
           };
         });
+        // If this was the initial load of page 1, trigger prefetch for subsequent pages.
+        if (pageNumber === 1 && !shouldPrefetch) {
+          // We need to ensure prefetchNextPages has access to the updated state (like totalPages)
+          // So we pass the potentially updated totalPages and current page directly,
+          // or rely on it being called in a subsequent render cycle after state is set.
+          // A direct call here might use stale state for totalPages if not careful.
+          // Let's call it via a microtask to ensure state update has occurred.
+          Promise.resolve().then(() => {
+            // Re-access state here or ensure prefetchNextPages uses its own up-to-date state.
+            // For simplicity, prefetchNextPages already reads the latest state.
+            prefetchNextPages(1); 
+          });
+        }
       } else {
         // If no events were fetched, it might be an empty page or past the last page.
         // Update totalPages if this fetch gives us that info (e.g. if API confirms current page is out of bounds by returning totalPages)
@@ -228,7 +241,7 @@ export const usePageLoader = () => {
         setState(prev => ({ ...prev, isPrefetching: false }));
     }
 
-  }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, pageNumbersCurrentlyLoadingState]);
+  }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, pageNumbersCurrentlyLoadingState, state.totalPages]);
 
   const getVisibleEventIds = useCallback(() => {
     const visibleIds: number[] = [];
