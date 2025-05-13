@@ -18,10 +18,8 @@ function App() {
     loading,
     isLoadingMore,
     error,
-    loadPage,
     prefetchNextPages,
     canLoadMore,
-    currentPage,
     lastLoadedPage,
   } = usePageLoader();
 
