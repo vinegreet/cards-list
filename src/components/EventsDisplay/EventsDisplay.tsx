@@ -4,6 +4,9 @@ import { EventsContext, EventsContextType } from '../../logic/context';
 import { EventCard } from '../EventCard';
 import { AnimatedLoader } from '../styling/Loaders';
 
+// Number of screen heights for the pre-fetch to be triggered
+const PREFETCH_TRIGGER_DISTANCE = 3;
+
 // Styled components moved from App.tsx
 const CardsContainer = styled.div`
   display: flex;
@@ -45,7 +48,7 @@ export function EventsDisplay() {
   useEffect(() => {
     const observerOptions = {
       root: null,
-      rootMargin: '200px',
+      rootMargin: `0px 0px ${100 * PREFETCH_TRIGGER_DISTANCE}% 0px`,
       threshold: 0.1
     };
 
