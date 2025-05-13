@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { EventsContext, EventsContextType } from '../../logic/context';
 import { EventCard } from '../EventCard';
@@ -10,6 +10,8 @@ const CardsContainer = styled.div`
   justify-content: flex-start;
   gap: 20px;
   padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const LoadingIndicator = styled.div`
@@ -20,6 +22,12 @@ const LoadingIndicator = styled.div`
   color: #fff;
 `;
 
+const Sentinel = styled.div`
+  width: 100%;
+  height: 50px;
+  margin-top: 20px;
+`;
+
 export function EventsDisplay() {
   const {
     eventIds: displayEventIds,
@@ -28,21 +36,38 @@ export function EventsDisplay() {
     loadMoreEvents,
     isLoadingMore,
     canLoadMore,
-  } = React.useContext(EventsContext)! as EventsContextType; // Added type assertion for safety
+  } = React.useContext(EventsContext)! as EventsContextType;
 
-  const observer = useRef<IntersectionObserver>(null);
-  const lastCardRef = useCallback((node: HTMLDivElement) => {
-    if (isLoadingMore) return;
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && canLoadMore) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const observer = useRef<IntersectionObserver | undefined>(undefined);
+
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '200px',
+      threshold: 0.1
+    };
+
+    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
+      console.log('Intersection detected:', entries[0].isIntersecting);
+      if (entries[0].isIntersecting && canLoadMore && !isLoadingMore) {
+        console.log('Loading more events...');
         loadMoreEvents();
       }
-    });
-    
-    if (node) observer.current.observe(node);
-  }, [isLoadingMore, canLoadMore, loadMoreEvents]);
+    };
+
+    observer.current = new IntersectionObserver(handleIntersect, observerOptions);
+
+    if (sentinelRef.current) {
+      observer.current.observe(sentinelRef.current);
+    }
+
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [canLoadMore, isLoadingMore, loadMoreEvents]);
 
   if (displayInitialLoading && (!displayEventIds || displayEventIds.length === 0)) {
     return <LoadingIndicator>Loading events...</LoadingIndicator>;
@@ -58,14 +83,10 @@ export function EventsDisplay() {
 
   return (
     <CardsContainer>
-      {displayEventIds.map((id, index) => (
-        <div 
-          key={id} 
-          ref={index === displayEventIds.length - 1 ? lastCardRef : undefined}
-        >
-          <EventCard eventId={id} />
-        </div>
+      {displayEventIds.map(id => (
+        <EventCard key={id} eventId={id} />
       ))}
+      <Sentinel ref={sentinelRef} />
       {isLoadingMore && <LoadingIndicator>Loading more events...</LoadingIndicator>}
     </CardsContainer>
   );
