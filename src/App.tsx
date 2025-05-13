@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import './App.css';
 import { EventsContext, EventsContextType } from './logic/context';
 import { EventsDisplay } from './components/EventsDisplay';
 import { usePageLoader } from './logic/hooks';
