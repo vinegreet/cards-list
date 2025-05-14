@@ -1,7 +1,6 @@
-
-export const PAGE_SIZE = 5;
-export const FIRST_BATCH = 2; // Number of pages to fetch directly when first loading
-export const PREFETCH_BATCH = 5; // Number of pages to prefetch ahead
+export const PAGE_SIZE = 25;
+// export const FIRST_BATCH = 2; // Number of pages to fetch directly when first loading
+// export const PREFETCH_BATCH = 5; // Number of pages to prefetch ahead
 // TODO: ask if we should switch to 20 pages
 // (but then only prefetch when current events loaded their assets)
 

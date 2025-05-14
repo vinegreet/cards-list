@@ -2,7 +2,7 @@ import { useContext, useCallback, useRef, useState, useEffect } from 'react';
 import { EventsContext } from './context';
 import { fetchEventsData } from '../api/eventService';
 import { Event as EventType } from '../api/models';
-import { FIRST_BATCH, PAGE_SIZE, PREFETCH_BATCH } from './config';
+import { PAGE_SIZE } from './config';
 
 // Define the custom hook to use the EventsContext
 /**
@@ -220,18 +220,16 @@ export const usePageLoader = () => {
   }, [state.pages, state.totalLoadedPages, state.currentPage, state.totalPages, setState, setEventsMappedById, setError /* prefetchNextPagesRef.current will be stable via ref */]); 
 
   useEffect(() => {
-    // On initial mount, fetch FIRST_BATCH pages in parallel
+    // On initial mount, fetch only the first page
     if (state.totalLoadedPages === 0) {
-      for (let i = 1; i <= FIRST_BATCH; i++) {
-        loadPage(i, false); // false: not a prefetch, but initial batch
-      }
+      loadPage(1, false);
     }
   }, [loadPage, state.totalLoadedPages]);
 
   /**
-   * Prefetches the next PREFETCH_BATCH pages after the current page, as a batch.
-   * Will not start a new batch if already prefetching, or if at the page/data limit.
-   * Only sets isPrefetching to false after all pages in the batch are loaded.
+   * Prefetches the next page after the current page.
+   * Will not start a new prefetch if already prefetching, or if at the page/data limit.
+   * Only sets isPrefetching to false after the page is loaded.
    */
   const prefetchNextPages = useCallback((currentPageFromCaller: number) => {
     // Do not prefetch if already prefetching, or if at the page/data limit
@@ -239,28 +237,18 @@ export const usePageLoader = () => {
         return;
     }
 
-    const pagesToAttemptPrefetch: number[] = [];
-    for (let i = 1; i <= PREFETCH_BATCH; i++) {
-      const nextPageToPrefetch = currentPageFromCaller + i;
-      // Stop if we hit known total pages or hard limit
-      if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || nextPageToPrefetch > 20) {
-        break; 
-      }
-      // Only prefetch pages that are not already loaded or loading
-      if (!state.pages[nextPageToPrefetch]?.isLoaded && !pageNumbersCurrentlyLoading_ref.current.has(nextPageToPrefetch)) {
-        pagesToAttemptPrefetch.push(nextPageToPrefetch);
-      }
+    const nextPageToPrefetch = currentPageFromCaller + 1;
+    // Stop if we hit known total pages or hard limit
+    if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || nextPageToPrefetch > 20) {
+      return; 
     }
-
-    if (pagesToAttemptPrefetch.length > 0) {
-      // Track the batch of prefetching pages
-      prefetchingPages_ref.current = new Set(pagesToAttemptPrefetch);
+    // Only prefetch page that is not already loaded or loading
+    if (!state.pages[nextPageToPrefetch]?.isLoaded && !pageNumbersCurrentlyLoading_ref.current.has(nextPageToPrefetch)) {
+      prefetchingPages_ref.current = new Set([nextPageToPrefetch]);
       setState(prev => ({ ...prev, isPrefetching: true }));
-      pagesToAttemptPrefetch.forEach(pageNumber => {
-        loadPage(pageNumber, true); // shouldPrefetch is true
-      });
+      loadPage(nextPageToPrefetch, true); // shouldPrefetch is true
     }
-    // isPrefetching will be set to false by the finally block in the last loadPage call from this batch.
+    // isPrefetching will be set to false by the finally block in the loadPage call.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isPrefetching, state.totalLoadedPages, state.pages, loadPage, state.totalPages, pageNumbersCurrentlyLoading_ref]); // pageNumbersCurrentlyLoading_ref is stable
 
