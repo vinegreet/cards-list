@@ -9,6 +9,7 @@ const AppContainer = styled.div`
   width: 100%;
   overflow-y: auto;
   background: #F5F2F0;
+  /*background-color: #444;*/ /* For evenings */
 `;
 
 function App() {
