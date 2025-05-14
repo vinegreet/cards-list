@@ -4,5 +4,8 @@ export const PAGE_SIZE = 25;
 // TODO: ask if we should switch to 20 pages
 // (but then only prefetch when current events loaded their assets)
 
+// Records number limit
+export const MAX_RECORDS = 100;
+
 // Number of screen heights for the pre-fetch to be triggered
 export const PREFETCH_TRIGGER_DISTANCE = 2;

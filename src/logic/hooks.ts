@@ -2,7 +2,7 @@ import { useContext, useCallback, useRef, useState, useEffect } from 'react';
 import { EventsContext } from './context';
 import { fetchEventsData } from '../api/eventService';
 import { Event as EventType } from '../api/models';
-import { PAGE_SIZE } from './config';
+import { PAGE_SIZE, MAX_RECORDS } from './config';
 
 // Define the custom hook to use the EventsContext
 /**
@@ -34,6 +34,9 @@ interface EventsState {
   totalPages: number | null;
 }
 
+// Calculate total loaded records
+const getTotalLoadedRecords = (pages: Record<number, PageState>) => Object.values(pages).reduce((sum, page) => sum + (page.eventIds?.length || 0), 0);
+
 /**
  * `usePageLoader` is a custom hook responsible for managing the fetching, caching, 
  * and pagination of event data. It handles the state for loaded pages, 
@@ -42,7 +45,7 @@ interface EventsState {
  * This hook encapsulates the core logic for lazy loading and prefetching event items.
  *
  * Key features:
- * - Loads event data page by page, with a hard limit of 20 pages.
+ * - Loads event data page by page, with a hard limit of MAX_RECORDS.
  * - Prefetches a batch of pages (PREFETCH_BATCH) ahead when needed.
  * - Ensures prefetching is only considered complete when all pages in the batch are loaded.
  * - Prevents duplicate loads and manages loading state for both direct and prefetch loads.
@@ -101,8 +104,8 @@ export const usePageLoader = () => {
       return;
     }
 
-    // Enforce a hard limit of 20 pages
-    if (state.totalLoadedPages >= 20 || (state.totalPages !== null && pageNumber > state.totalPages)) {
+    // Enforce a hard limit of MAX_RECORDS
+    if (getTotalLoadedRecords(state.pages) >= MAX_RECORDS || (state.totalPages !== null && pageNumber > state.totalPages)) {
       return;
     }
     
@@ -233,13 +236,13 @@ export const usePageLoader = () => {
    */
   const prefetchNextPages = useCallback((currentPageFromCaller: number) => {
     // Do not prefetch if already prefetching, or if at the page/data limit
-    if (state.isPrefetching || state.totalLoadedPages >= 20 || (state.totalPages !== null && currentPageFromCaller >= state.totalPages)) {
+    if (state.isPrefetching || getTotalLoadedRecords(state.pages) >= MAX_RECORDS || (state.totalPages !== null && currentPageFromCaller >= state.totalPages)) {
         return;
     }
 
     const nextPageToPrefetch = currentPageFromCaller + 1;
     // Stop if we hit known total pages or hard limit
-    if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || nextPageToPrefetch > 20) {
+    if ((state.totalPages !== null && nextPageToPrefetch > state.totalPages) || getTotalLoadedRecords(state.pages) + PAGE_SIZE > MAX_RECORDS) {
       return; 
     }
     // Only prefetch page that is not already loaded or loading
