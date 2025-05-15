@@ -154,14 +154,6 @@ export const usePageLoader = () => {
 
           return { ...prev, ...updatePayload };
         });
-        // After loading the first page directly, trigger prefetch for the next batch
-        if (pageNumber === 1 && !shouldPrefetch && prefetchNextPagesRef.current) {
-          Promise.resolve().then(() => {
-            if (prefetchNextPagesRef.current) {
-              prefetchNextPagesRef.current(1);
-            }
-          });
-        }
       } else {
         setState(prev => {
             const newTotalPages = paginationInfo?.totalPages !== undefined ? paginationInfo.totalPages : prev.totalPages;
