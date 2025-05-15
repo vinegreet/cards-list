@@ -21,17 +21,21 @@ export const useEvents = () => {
 
 
 /**
- * `usePageLoader` is a custom hook responsible for managing the fetching, caching, 
- * and pagination of event data. It handles the state for loaded pages, 
- * individual event data mapped by ID, loading indicators (initial, more, prefetching), 
- * error states, and provides functions to load and prefetch pages.
- * This hook encapsulates the core logic for lazy loading and prefetching event items.
+ * usePageLoader is a custom hook responsible for managing the fetching, caching,
+ * and pagination of event data. It handles the state for loaded pages, individual event data
+ * mapped by ID, loading indicators (initial, more, prefetching), error states, and provides
+ * functions to load and prefetch pages.
  *
- * Key features:
- * - Loads event data page by page, with a hard limit of MAX_RECORDS.
- * - Prefetches a batch of pages (PREFETCH_BATCH) ahead when needed.
- * - Ensures prefetching is only considered complete when all pages in the batch are loaded.
- * - Prevents duplicate loads and manages loading state for both direct and prefetch loads.
+ * @returns {Object} Loader state and API
+ * @property {number[]} eventIds - All visible event IDs in order.
+ * @property {Record<number, EventType>} eventsMappedById - Map of event data by ID.
+ * @property {boolean} loading - True if the initial page is loading.
+ * @property {boolean} isLoadingMore - True if more pages are being loaded or prefetched.
+ * @property {string|null} error - Error message if loading failed, otherwise null.
+ * @property {(currentPageFromCaller: number) => void} prefetchNextPages - Function to prefetch the next page.
+ * @property {boolean} canLoadMore - True if more pages can be loaded.
+ * @property {number} lastLoadedPage - The last loaded page number.
+ * @property {number|null} totalPages - Total number of pages, or null if unknown.
  */
 export const usePageLoader = () => {
   const [state, setState] = useState<EventsState>({
