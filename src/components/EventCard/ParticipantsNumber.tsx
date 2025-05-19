@@ -6,11 +6,11 @@ interface ParticipantsNumberProps {
   isFull?: boolean;
 }
 
-const ParticipantsContainer = styled.div<{ isFull?: boolean }>`
+const ParticipantsContainer = styled.div<{ $isFull?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: ${props => props.isFull ? 'rgba(198, 4, 14, 0.8)' : 'rgba(34, 34, 34, 0.9)'};
+  background: ${({ $isFull }) => $isFull ? 'rgba(198, 4, 14, 0.8)' : 'rgba(34, 34, 34, 0.9)'};
   border-radius: 12px;
   padding: 8px;
   min-width: 30px;
@@ -27,7 +27,7 @@ const Number = styled.span`
 
 const ParticipantsNumber: React.FC<ParticipantsNumberProps> = ({ number, isFull = false }) => {
   return (
-    <ParticipantsContainer isFull={isFull}>
+    <ParticipantsContainer $isFull={isFull}>
       <Number>
         +{number}
         {isFull && <span>/{number}</span>}

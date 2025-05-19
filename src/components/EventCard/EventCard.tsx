@@ -29,10 +29,10 @@ const CardContent = styled.div`
   overflow: hidden;
 `;
 
-const PosterImage = styled.div<{ posterImage: string }>`
+const PosterImage = styled.div<{ $posterImage: string }>`
   width: 100%;
   height: 216px;
-  background-image: ${props => props.posterImage ? `url(${props.posterImage})` : 'none'};
+  background-image: ${({ $posterImage }) => $posterImage ? `url(${$posterImage})` : 'none'};
   background-size: cover;
   background-position: center;
   background-color: #808080; /* Fallback color */
@@ -71,7 +71,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({ eventId }) => {
   return (
     <CardContainer>
       <CardContent>
-        <PosterImage posterImage={posterSrc}>
+        <PosterImage $posterImage={posterSrc}>
           <PosterOverlay 
             participantsNumber={participantsCount !== null ? participantsCount : 0} 
             badges={event.badges}
